@@ -61,6 +61,7 @@ let userId;
 try {
   const res = await fetch(`${baseUrl}/api/auth/sign-up/email`, {
     method: "POST",
+    redirect: "manual",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",

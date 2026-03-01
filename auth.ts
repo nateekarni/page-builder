@@ -32,6 +32,12 @@ export function createAuth(d1: D1Database) {
     baseURL: "https://page-builder-1tl.pages.dev",
     trustedOrigins: ["https://page-builder-1tl.pages.dev"],
 
+    advanced: {
+      useSecureCookies: true,
+      skipTrailingSlashes: true,
+      disableCSRFCheck: true,
+    },
+
     emailAndPassword: {
       enabled: true,
     },
