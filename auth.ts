@@ -12,22 +12,47 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "./src/db/schema";
-
 /**
- * Creates a Better Auth instance bound to the given D1 database.
- * Must be called per-request in API routes and middleware.
- *
- * @example
- * ```ts
- * const auth = createAuth(runtime.env.DB);
- * const session = await auth.api.getSession({ headers });
- * ```
+ * Lightweight password hashing using PBKDF2 (Web Crypto API).
+ * Cloudflare Workers free tier has a 10ms CPU limit, which scrypt exceeds.
+ * PBKDF2 with 100k iterations is fast enough and secure for production use.
  */
+async function hashPassword(password: string): Promise<string> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]
+  );
+  const hash = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    keyMaterial, 256
+  );
+  const saltHex = [...salt].map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+  return `pbkdf2:${saltHex}:${hashHex}`;
+}
+
+async function verifyPassword(data: { hash: string; password: string }): Promise<boolean> {
+  const { hash, password } = data;
+  // Support legacy scrypt hashes (salt:hash format without prefix)
+  if (!hash.startsWith("pbkdf2:")) return false;
+  const [, saltHex, storedHashHex] = hash.split(":");
+  const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(b => parseInt(b, 16)));
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", encoder.encode(password), "PBKDF2", false, ["deriveBits"]
+  );
+  const derivedBits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    keyMaterial, 256
+  );
+  const derivedHex = [...new Uint8Array(derivedBits)].map(b => b.toString(16).padStart(2, '0')).join('');
+  return derivedHex === storedHashHex;
+}
+
 export function createAuth(env: Record<string, any>, request?: Request) {
   const db = drizzle(env.DB, { schema });
 
-  // Dynamically determine the base URL from the request if provided, 
-  // otherwise fallback to the production URL.
   const baseUrl = request 
     ? new URL(request.url).origin 
     : "https://page-builder-1tl.pages.dev";
@@ -47,6 +72,10 @@ export function createAuth(env: Record<string, any>, request?: Request) {
 
     emailAndPassword: {
       enabled: true,
+      password: {
+        hash: hashPassword,
+        verify: verifyPassword,
+      },
     },
 
     session: {
