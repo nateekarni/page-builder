@@ -14,7 +14,7 @@ import { createAuth } from "../auth";
 import { createDatabase } from "./db/client";
 
 /** Routes that don't require authentication */
-const PUBLIC_PATHS = ["/api/auth", "/admin/login", "/api/setup"];
+const PUBLIC_PATHS = ["/api/auth", "/admin/login", "/api/setup", "/api/debug-auth"];
 
 /** Actions restricted to admin role only */
 const ADMIN_ONLY_PATHS = ["/admin/users", "/api/users"];
