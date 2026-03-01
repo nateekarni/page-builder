@@ -13,7 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "deploy": "astro build && wrangler pages deploy dist --project-name page-builder-1tl --commit-dirty=true --compatibility-flags nodejs_compat --compatibility-date 2026-02-28",
+    "deploy": "astro build && wrangler pages deploy dist --project-name page-builder-1tl --commit-dirty=true",
     "db:migrate:prod": "wrangler d1 migrations apply portfolio-builder-db --remote"
   },
   "dependencies": {
