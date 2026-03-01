@@ -43,7 +43,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Non-admin routes — try to get session but don't block
   if (!pathname.startsWith("/admin") && !pathname.startsWith("/api/")) {
     try {
-      const auth = createAuth(d1);
+      const auth = createAuth(d1, context.request);
       const session = await auth.api.getSession({
         headers: context.request.headers,
       });
@@ -67,7 +67,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Admin/API routes — require authentication
   try {
-    const auth = createAuth(d1);
+    const auth = createAuth(d1, context.request);
     const session = await auth.api.getSession({
       headers: context.request.headers,
     });

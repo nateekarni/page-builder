@@ -9,7 +9,7 @@ import type { APIRoute } from 'astro';
 import { createAuth } from '../../../../auth';
 
 const handleAuthRequest: APIRoute = async ({ request, locals }) => {
-  const auth = createAuth(locals.runtime.env.DB);
+  const auth = createAuth(locals.runtime.env.DB, request);
   return auth.handler(request);
 };
 

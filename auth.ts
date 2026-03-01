@@ -23,20 +23,26 @@ import * as schema from "./src/db/schema";
  * const session = await auth.api.getSession({ headers });
  * ```
  */
-export function createAuth(d1: D1Database) {
+export function createAuth(d1: D1Database, request?: Request) {
   const db = drizzle(d1, { schema });
+
+  // Dynamically determine the base URL from the request if provided, 
+  // otherwise fallback to the production URL.
+  const baseUrl = request 
+    ? new URL(request.url).origin 
+    : "https://page-builder-1tl.pages.dev";
 
   return betterAuth({
     database: drizzleAdapter(db, { provider: "sqlite" }),
     basePath: "/api/auth",
-    baseURL: "https://page-builder-1tl.pages.dev",
-    trustedOrigins: ["https://page-builder-1tl.pages.dev"],
+    baseURL: baseUrl,
+    trustedOrigins: [baseUrl, "https://page-builder-1tl.pages.dev"],
 
     advanced: {
-      useSecureCookies: true,
       skipTrailingSlashes: true,
       disableCSRFCheck: true,
     },
+    trustHost: true,
 
     emailAndPassword: {
       enabled: true,
