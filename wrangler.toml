@@ -8,7 +8,7 @@ pages_build_output_dir = "./dist"
 [[d1_databases]]
 binding = "DB"
 database_name = "portfolio-builder-db"
-database_id = "local"
+database_id = "af0126f2-d1e0-40a9-ab73-6de8dc1f80fe"
 
 # R2 Object Storage
 [[r2_buckets]]

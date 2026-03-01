@@ -1,16 +1,31 @@
 {
 	"main": "dist/_worker.js/index.js",
 	"name": "portfolio-builder",
-  "compatibility_date": "2026-02-28",
-  "compatibility_flags": [
-    "nodejs_compat",
-    "global_fetch_strictly_public"
-  ],
+	"compatibility_date": "2026-02-28",
+	"compatibility_flags": [
+		"nodejs_compat",
+		"global_fetch_strictly_public"
+	],
 	"assets": {
 		"binding": "ASSETS",
 		"directory": "./dist"
 	},
 	"observability": {
-    "enabled": true
-  }
+		"enabled": true
+	},
+	"d1_databases": [
+		{
+			"binding": "portfolio_builder_db",
+			"database_name": "portfolio-builder-db",
+			"database_id": "af0126f2-d1e0-40a9-ab73-6de8dc1f80fe",
+			"remote": true
+		}
+	],
+	"r2_buckets": [
+		{
+			"bucket_name": "portfolio-media",
+			"binding": "portfolio_media",
+			"remote": true
+		}
+	]
 }
