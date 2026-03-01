@@ -45,6 +45,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         email: body.email,
         password: body.password,
       },
+      headers: new Headers({
+        'content-type': 'application/json',
+      }),
     });
 
     if (!result) {
@@ -63,6 +66,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return Response.json({ success: false, errors: error.flatten() }, { status: 400 });
     }
     console.error('[Setup API] Error:', error);
-    return Response.json({ success: false, error: 'Internal server error' }, { status: 500 });
+    return Response.json({ success: false, error: error instanceof Error ? error.message : String(error) }, { status: 500 });
   }
 };
