@@ -43,6 +43,12 @@ export function createAuth(d1: D1Database) {
       },
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // 1 day
+      cookieAttributes: {
+        secure: true,
+        sameSite: "lax",
+        httpOnly: true,
+        path: "/",
+      },
     },
 
     user: {
