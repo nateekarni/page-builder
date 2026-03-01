@@ -37,7 +37,8 @@ export default function LoginForm() {
       }
 
       console.log("[LOGIN] Success, redirecting to /admin");
-      window.location.href = "/admin";
+      // Use proper redirect to maintain session
+      window.location.replace("/admin");
     } catch (err) {
       console.error("[LOGIN] Exception:", err);
       setError("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
