@@ -9,7 +9,6 @@ import type { APIRoute } from 'astro';
 import { createAuth } from '../../../../auth';
 
 const handleAuthRequest: APIRoute = async ({ request, locals }) => {
-  console.log('[AUTH ROUTE] Reached route with URL:', request.url);
   const auth = createAuth(locals.runtime.env, request);
   return auth.handler(request);
 };

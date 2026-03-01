@@ -14,7 +14,7 @@ const siteUrl =
   "https://page-builder-1tl.pages.dev";
 
 export const authClient = createAuthClient({
-  baseURL: siteUrl ? `${siteUrl.replace(/\/$/, "")}/api/auth` : "/api/auth",
+  baseURL: siteUrl.replace(/\/$/, ""),
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;

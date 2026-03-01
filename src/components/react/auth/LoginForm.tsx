@@ -24,21 +24,26 @@ export default function LoginForm() {
 
     try {
       console.log("[LOGIN] Attempting sign in with:", email);
-      console.log("[LOGIN] Base URL:", import.meta.env.SITE);
 
-      const result = await signIn.email({ email, password });
+      const result = await signIn.email(
+        {
+          email,
+          password,
+          callbackURL: "/admin",
+        },
+        {
+          onSuccess: () => {
+            console.log("[LOGIN] Success, redirecting to /admin");
+            window.location.href = "/admin";
+          },
+          onError: (ctx) => {
+            console.error("[LOGIN] Error:", ctx.error);
+            setError(ctx.error.message ?? "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+          },
+        }
+      );
 
       console.log("[LOGIN] Sign in result:", result);
-
-      if (result.error) {
-        console.error("[LOGIN] Error:", result.error);
-        setError(result.error.message ?? "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
-        return;
-      }
-
-      console.log("[LOGIN] Success, redirecting to /admin");
-      // Use proper redirect to maintain session
-      window.location.replace("/admin");
     } catch (err) {
       console.error("[LOGIN] Exception:", err);
       setError("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
