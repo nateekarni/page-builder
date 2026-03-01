@@ -30,24 +30,15 @@ export function createAuth(d1: D1Database) {
   return betterAuth({
     database: drizzleAdapter(db, { provider: "sqlite" }),
     basePath: "/api/auth",
+    baseURL: "https://page-builder-1tl.pages.dev",
 
     emailAndPassword: {
       enabled: true,
     },
 
     session: {
-      cookieCache: {
-        enabled: true,
-        maxAge: 60 * 5, // 5 minutes
-      },
       expiresIn: 60 * 60 * 24 * 7, // 7 days
       updateAge: 60 * 60 * 24, // 1 day
-      cookieAttributes: {
-        secure: true,
-        sameSite: "none",
-        httpOnly: true,
-        path: "/",
-      },
     },
 
     user: {

@@ -9,8 +9,12 @@
 
 import { createAuthClient } from "better-auth/react";
 
+const siteUrl =
+  (import.meta.env.SITE as string | undefined) ??
+  "https://page-builder-1tl.pages.dev";
+
 export const authClient = createAuthClient({
-  baseURL: import.meta.env.SITE || "https://page-builder-1tl.pages.dev",
+  baseURL: siteUrl.replace(/\/$/, ""),
 });
 
 export const { signIn, signUp, signOut, useSession } = authClient;

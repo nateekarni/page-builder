@@ -125,7 +125,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
 
     return next();
-  } catch {
+  } catch (err) {
+    console.error("[MIDDLEWARE] Error:", err);
     if (pathname.startsWith("/api/")) {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized" }),
