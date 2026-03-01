@@ -1,0 +1,52 @@
+---
+import AdminLayout from "../../../layouts/AdminLayout.astro";
+---
+
+<AdminLayout title="จัดการหน้าเว็บ" activeNav="pages">
+  <div class="content">
+    <div class="header">
+      <h1>หน้าเว็บ (Pages)</h1>
+      <a href="/admin/pages/new" class="btn-primary">+ สร้างหน้าใหม่</a>
+    </div>
+
+    <div class="placeholder">
+      <p>ระบบจัดการหน้าเว็บกำลังอยู่ในช่วงพัฒนา (Work In Progress)</p>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .content {
+    padding: 1rem 0;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+  h1 {
+    font-size: 1.5rem;
+    color: #f8fafc;
+    margin: 0;
+  }
+  .btn-primary {
+    background: #3b82f6;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .btn-primary:hover {
+    background: #2563eb;
+  }
+  .placeholder {
+    background: #1e293b;
+    padding: 3rem;
+    border-radius: 0.75rem;
+    text-align: center;
+    color: #94a3b8;
+    border: 1px dashed #334155;
+  }
+</style>
