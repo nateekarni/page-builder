@@ -30,7 +30,7 @@ export function createAuth(d1: D1Database) {
   return betterAuth({
     database: drizzleAdapter(db, { provider: "sqlite" }),
     basePath: "/api/auth",
-    trustedOrigins: ["https://page-builder-1tl.pages.dev"],
+    trustedOrigins: ["page-builder-1tl.pages.dev"],
 
     emailAndPassword: {
       enabled: true,
