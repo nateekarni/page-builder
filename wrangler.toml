@@ -4,6 +4,9 @@ compatibility_flags = ["nodejs_compat"]
 
 pages_build_output_dir = "./dist"
 
+# D1 Migrations
+migrations_dir = "drizzle/migrations"
+
 # D1 Database
 [[d1_databases]]
 binding = "DB"
