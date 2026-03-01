@@ -8,11 +8,11 @@
  * Clean Code: declarative config, no imperative logic.
  */
 
-import { betterAuth } from 'better-auth';
-import { drizzleAdapter } from 'better-auth/adapters/drizzle';
-import { admin } from 'better-auth/plugins';
-import { drizzle } from 'drizzle-orm/d1';
-import * as schema from './src/db/schema';
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin } from "better-auth/plugins";
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "./src/db/schema";
 
 /**
  * Creates a Better Auth instance bound to the given D1 database.
@@ -28,8 +28,9 @@ export function createAuth(d1: D1Database) {
   const db = drizzle(d1, { schema });
 
   return betterAuth({
-    database: drizzleAdapter(db, { provider: 'sqlite' }),
-    basePath: '/api/auth',
+    database: drizzleAdapter(db, { provider: "sqlite" }),
+    basePath: "/api/auth",
+    trustedOrigins: ["https://page-builder-1tl.pages.dev"],
 
     emailAndPassword: {
       enabled: true,
@@ -41,23 +42,21 @@ export function createAuth(d1: D1Database) {
         maxAge: 60 * 5, // 5 minutes
       },
       expiresIn: 60 * 60 * 24 * 7, // 7 days
-      updateAge: 60 * 60 * 24,     // 1 day
+      updateAge: 60 * 60 * 24, // 1 day
     },
 
     user: {
       additionalFields: {
         role: {
-          type: 'string',
+          type: "string",
           required: false,
-          defaultValue: 'author',
+          defaultValue: "author",
           input: false, // cannot be set by user during signup
         },
       },
     },
 
-    plugins: [
-      admin(),
-    ],
+    plugins: [admin()],
   });
 }
 
