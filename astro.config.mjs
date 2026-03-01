@@ -1,19 +1,16 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
-import tailwindcss from '@tailwindcss/vite';
-import react from '@astrojs/react';
-import cloudflare from '@astrojs/cloudflare';
-import sitemap from '@astrojs/sitemap';
+import cloudflare from "@astrojs/cloudflare";
+import react from "@astrojs/react";
+import sitemap from "@astrojs/sitemap";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://portfolio-builder.pages.dev',
-  output: 'server',
+  site: "https://page-builder-1tl.pages.dev/",
+  output: "server",
 
-  integrations: [
-    react(),
-    sitemap(),
-  ],
+  integrations: [react(), sitemap()],
 
   adapter: cloudflare({
     platformProxy: {
