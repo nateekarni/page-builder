@@ -23,8 +23,8 @@ import * as schema from "./src/db/schema";
  * const session = await auth.api.getSession({ headers });
  * ```
  */
-export function createAuth(d1: D1Database, request?: Request) {
-  const db = drizzle(d1, { schema });
+export function createAuth(env: Record<string, any>, request?: Request) {
+  const db = drizzle(env.DB, { schema });
 
   // Dynamically determine the base URL from the request if provided, 
   // otherwise fallback to the production URL.
@@ -37,6 +37,7 @@ export function createAuth(d1: D1Database, request?: Request) {
     basePath: "/api/auth",
     baseURL: baseUrl,
     trustedOrigins: [baseUrl, "https://page-builder-1tl.pages.dev"],
+    secret: env.BETTER_AUTH_SECRET || (typeof process !== "undefined" ? process.env.BETTER_AUTH_SECRET : undefined),
 
     advanced: {
       skipTrailingSlashes: true,

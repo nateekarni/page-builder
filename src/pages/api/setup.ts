@@ -35,7 +35,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     const body = setupSchema.parse(await request.json());
-    const auth = createAuth(locals.runtime.env.DB, request);
+    const auth = createAuth(locals.runtime.env, request);
 
     // 2. Delegate to Better Auth for creation + password hashing
     // We send a dummy Headers object so it doesn't fail trying to read cookies
