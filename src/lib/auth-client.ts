@@ -7,15 +7,10 @@
  * Clean Code: single file for all client-side auth operations.
  */
 
-import { createAuthClient } from 'better-auth/react';
+import { createAuthClient } from "better-auth/react";
 
 export const authClient = createAuthClient({
-  baseURL: import.meta.env.SITE || 'http://localhost:4321',
+  baseURL: import.meta.env.SITE || "https://page-builder-1tl.pages.dev",
 });
 
-export const {
-  signIn,
-  signUp,
-  signOut,
-  useSession,
-} = authClient;
+export const { signIn, signUp, signOut, useSession } = authClient;

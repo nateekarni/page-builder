@@ -23,15 +23,23 @@ export default function LoginForm() {
     setIsLoading(true);
 
     try {
+      console.log("[LOGIN] Attempting sign in with:", email);
+      console.log("[LOGIN] Base URL:", import.meta.env.SITE);
+
       const result = await signIn.email({ email, password });
 
+      console.log("[LOGIN] Sign in result:", result);
+
       if (result.error) {
+        console.error("[LOGIN] Error:", result.error);
         setError(result.error.message ?? "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
         return;
       }
 
+      console.log("[LOGIN] Success, redirecting to /admin");
       window.location.href = "/admin";
-    } catch {
+    } catch (err) {
+      console.error("[LOGIN] Exception:", err);
       setError("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");
     } finally {
       setIsLoading(false);
