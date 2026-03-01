@@ -1,0 +1,188 @@
+---
+/**
+ * Header — Public site header with responsive navigation.
+ *
+ * Clean Code: receives all data as props, no data fetching.
+ * Semantic HTML: <header>, <nav>
+ * Responsive: hamburger menu on mobile via CSS + minimal JS.
+ */
+
+interface Props {
+  siteName: string;
+  logo?: string;
+  navLinks?: { label: string; url: string }[];
+}
+
+const { siteName, logo = '', navLinks = [] } = Astro.props;
+---
+
+<header class="site-header" role="banner">
+  <div class="header-container">
+    <a href="/" class="header-brand" aria-label={siteName}>
+      {logo ? (
+        <img src={logo} alt={siteName} class="header-logo" loading="eager" />
+      ) : (
+        <span class="header-site-name">{siteName}</span>
+      )}
+    </a>
+
+    {navLinks.length > 0 && (
+      <nav class="header-nav" aria-label="Main navigation">
+        <ul class="nav-list">
+          {navLinks.map((link) => (
+            <li><a href={link.url} class="nav-link">{link.label}</a></li>
+          ))}
+        </ul>
+      </nav>
+    )}
+
+    {navLinks.length > 0 && (
+      <button
+        class="hamburger"
+        id="hamburger-btn"
+        aria-label="Toggle navigation menu"
+        aria-expanded="false"
+      >
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+      </button>
+    )}
+  </div>
+
+  {navLinks.length > 0 && (
+    <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile navigation">
+      <ul class="mobile-nav-list">
+        {navLinks.map((link) => (
+          <li><a href={link.url} class="mobile-nav-link">{link.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+  )}
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-background);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .header-container {
+    max-width: var(--container-max-width);
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .header-brand {
+    text-decoration: none;
+    color: var(--color-foreground);
+    display: flex;
+    align-items: center;
+  }
+
+  .header-logo {
+    height: 36px;
+    width: auto;
+  }
+
+  .header-site-name {
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .nav-list {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+    margin: 0;
+    padding: 0;
+  }
+
+  .nav-link {
+    text-decoration: none;
+    color: var(--color-foreground);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: color 0.15s;
+  }
+
+  .nav-link:hover {
+    color: var(--color-primary);
+  }
+
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .hamburger-line {
+    width: 24px;
+    height: 2px;
+    background: var(--color-foreground);
+    transition: transform 0.2s, opacity 0.2s;
+  }
+
+  .mobile-nav {
+    display: none;
+    background: var(--color-background);
+    border-bottom: 1px solid var(--color-border);
+    padding: 0.5rem 1.5rem 1rem;
+  }
+
+  .mobile-nav.open {
+    display: block;
+  }
+
+  .mobile-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mobile-nav-link {
+    display: block;
+    padding: 0.75rem 0;
+    text-decoration: none;
+    color: var(--color-foreground);
+    font-size: 1rem;
+    font-weight: 500;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .mobile-nav-link:hover {
+    color: var(--color-primary);
+  }
+
+  @media (max-width: 767px) {
+    .header-nav {
+      display: none;
+    }
+
+    .hamburger {
+      display: flex;
+    }
+  }
+</style>
+
+<script>
+  const hamburger = document.getElementById('hamburger-btn');
+  const mobileNav = document.getElementById('mobile-nav');
+
+  hamburger?.addEventListener('click', () => {
+    const isOpen = mobileNav?.classList.toggle('open');
+    hamburger.setAttribute('aria-expanded', String(!!isOpen));
+  });
+</script>

@@ -1,0 +1,24 @@
+name = "portfolio-builder"
+compatibility_date = "2026-02-28"
+compatibility_flags = ["nodejs_compat"]
+
+pages_build_output_dir = "./dist"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "portfolio-builder-db"
+database_id = "local"
+
+# R2 Object Storage
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "portfolio-media"
+
+# Workers AI
+[ai]
+binding = "AI"
+
+# Cron Triggers — scheduled publishing
+[triggers]
+crons = ["* * * * *"]

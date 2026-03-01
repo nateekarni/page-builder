@@ -1,0 +1,9 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import UserManagement from "../../components/react/admin/UserManagement";
+export const prerender = false;
+---
+
+<AdminLayout title="จัดการผู้ใช้" activeNav="users">
+  <UserManagement client:only="react" />
+</AdminLayout>

@@ -1,0 +1,63 @@
+---
+/**
+ * SEOHead — Generates <title>, <meta>, OG, Twitter Card, and canonical tags.
+ *
+ * Clean Code: receives explicit props, no implicit data fetching.
+ * Outputs all SEO-critical head elements for public pages.
+ */
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  canonicalUrl?: string;
+  siteName?: string;
+  type?: string;
+  locale?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const {
+  title,
+  description = '',
+  ogImage = '',
+  canonicalUrl = '',
+  siteName = 'Aglow',
+  type = 'website',
+  locale = 'th_TH',
+  jsonLd,
+} = Astro.props;
+
+const fullTitle = title.includes(siteName) ? title : `${title} — ${siteName}`;
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+
+{canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+
+<!-- Open Graph -->
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:type" content={type} />
+<meta property="og:locale" content={locale} />
+<meta property="og:site_name" content={siteName} />
+{canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+{ogImage && <meta property="og:image" content={ogImage} />}
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+{ogImage && <meta name="twitter:image" content={ogImage} />}
+
+<!-- JSON-LD -->
+{jsonLd && (
+  Array.isArray(jsonLd) ? (
+    jsonLd.map((schema) => (
+      <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+    ))
+  ) : (
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+  )
+)}

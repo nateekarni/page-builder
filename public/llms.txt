@@ -1,0 +1,21 @@
+# Aglow Portfolio Builder
+
+> Corporate website built with Astro, Cloudflare Pages, and a custom visual Page Builder CMS.
+
+## About
+This is a high-performance corporate website with a drag-and-drop page builder.
+Content is managed through an admin dashboard and rendered as static HTML with zero client-side JavaScript.
+
+## Tech Stack
+- Framework: Astro 5 (SSR mode)
+- Hosting: Cloudflare Pages (Edge)
+- Database: Cloudflare D1 (SQLite)
+- Storage: Cloudflare R2
+- Auth: Better Auth with RBAC
+
+## Pages
+All published pages are available at their respective slugs (e.g., /about, /services, /contact).
+The sitemap is available at /sitemap-index.xml.
+
+## Contact
+For inquiries, please use the contact form on the website.

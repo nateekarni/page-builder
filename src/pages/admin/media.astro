@@ -1,0 +1,9 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import MediaLibrary from "../../components/react/media/MediaLibrary";
+export const prerender = false;
+---
+
+<AdminLayout title="จัดการสื่อ" activeNav="media">
+  <MediaLibrary client:only="react" />
+</AdminLayout>

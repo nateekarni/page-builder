@@ -1,0 +1,24 @@
+---
+/**
+ * A/B Tests Admin Page
+ *
+ * Lists all A/B test experiments with status, actions.
+ * Uses React island for interactive management.
+ */
+
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="A/B Testing" activeNav="ab-tests">
+  <div id="ab-tests-root"></div>
+  <script>
+    import { createElement } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import ABTestsManager from '../../components/react/admin/ABTestsManager';
+
+    const root = document.getElementById('ab-tests-root');
+    if (root) {
+      createRoot(root).render(createElement(ABTestsManager));
+    }
+  </script>
+</AdminLayout>

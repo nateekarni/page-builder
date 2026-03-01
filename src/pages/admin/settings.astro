@@ -1,0 +1,9 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import SiteSettings from "../../components/react/admin/SiteSettings";
+export const prerender = false;
+---
+
+<AdminLayout title="ตั้งค่าเว็บไซต์" activeNav="settings">
+  <SiteSettings client:only="react" />
+</AdminLayout>

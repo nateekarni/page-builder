@@ -1,0 +1,42 @@
+# AI Privacy & Security Rules
+
+## Never Read or Anayze
+
+- Never read .env files (.env, .env.local, .env.production, etc.)
+- Never read files containing secrets, API keys, or passwords
+- Never read files with names likes: secrets, private, keys, config
+- Never read database connection strings or credentials
+
+## Never Suggest or Expose
+
+- Never suggest committing secrets to git
+- Never suggest exposing secrets in client-side code
+- Never suggest logging secrets or environment variables
+- Never suggest hard coding secrets in code
+
+## Always Use Placeholders
+
+- Always use placeholder values likes: DATABASE_URL="mysql://user:password@localhost/dbname"
+- Always use placeholder keys likes: API_KEY="your_api_key"
+- Always use placeholder secrets likes: AUTH_SECRET="your_auth_secret"
+
+## File Exclusions
+
+- Exclude all .env\* files from AI context
+- Exclude files in /secrets, /private, /keys, /config directories
+- Exclude files with extensions: .key, .pem, .crt, .pfx, .p12, .jks, .keystore
+
+## Code Review Rules
+
+- Flag any hardcoded secrets in code review
+- Suggest using environment variables for secrets
+- Suggest using secure storage for secrets
+- Remind about .gitignore for sensitive files
+
+## Privacy First
+
+- User privacy and security is a top priority
+- Never collect or store personal information without explicit user consent
+- Never share personal information or data with third parties
+- When in doubt, ask user before accessing sensitive data
+- Never assume it's safe to read configuration files

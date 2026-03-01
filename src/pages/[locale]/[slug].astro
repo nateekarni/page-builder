@@ -1,0 +1,146 @@
+---
+/**
+ * Locale-aware Page Route — renders translated pages.
+ *
+ * Route: /{locale}/{slug} → e.g., /th/about, /en/about
+ * Falls back to default page if no translation exists.
+ *
+ * Clean Code: thin orchestrator, reuses BlockRenderer and SEOHead.
+ */
+
+import { eq, and } from 'drizzle-orm';
+import { pages, translations, siteSettings } from '../../db/schema';
+import { designTokensSchema, generateTokenCSS, getDefaultTokens } from '../../lib/global-styles';
+import type { Block } from '../../lib/blocks';
+import BlockRenderer from '../../components/astro/BlockRenderer.astro';
+import SEOHead from '../../components/astro/SEOHead.astro';
+import Header from '../../components/astro/Header.astro';
+import Footer from '../../components/astro/Footer.astro';
+
+const { locale, slug } = Astro.params;
+const db = Astro.locals.db;
+
+if (!locale || !slug) {
+  return new Response(null, { status: 404, statusText: 'Not Found' });
+}
+
+const SUPPORTED_LOCALES = ['th', 'en', 'ja', 'zh', 'ko'];
+if (!SUPPORTED_LOCALES.includes(locale)) {
+  return new Response(null, { status: 404, statusText: 'Not Found' });
+}
+
+// Try to find translation
+const translationResult = await db
+  .select()
+  .from(translations)
+  .where(and(eq(translations.slug, slug), eq(translations.locale, locale)))
+  .limit(1);
+
+const translation = translationResult[0];
+
+if (!translation) {
+  // Fallback: try original page
+  return Astro.redirect(`/${slug}`);
+}
+
+// Verify the original page is published
+const pageResult = await db
+  .select()
+  .from(pages)
+  .where(and(eq(pages.id, translation.pageId), eq(pages.status, 'published')))
+  .limit(1);
+
+if (!pageResult[0]) {
+  return new Response(null, { status: 404, statusText: 'Not Found' });
+}
+
+const page = pageResult[0];
+
+// Load settings
+const settingsRows = await db.select().from(siteSettings);
+const settingsMap = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
+
+const tokensRaw = settingsMap['design_tokens'];
+const tokens = tokensRaw ? designTokensSchema.parse(tokensRaw) : getDefaultTokens();
+const tokenCSS = generateTokenCSS(tokens);
+
+const siteIdentity = (settingsMap['site_identity'] ?? {}) as Record<string, unknown>;
+const siteName = (siteIdentity.name as string) ?? 'Aglow';
+const siteLogo = (siteIdentity.logo as string) ?? '';
+const siteTagline = (siteIdentity.tagline as string) ?? '';
+const socialLinks = (settingsMap['social_links'] ?? { links: [] }) as Record<string, unknown>;
+const navSettings = (settingsMap['navigation'] ?? { links: [] }) as Record<string, unknown>;
+const navLinks = (navSettings.links ?? []) as { label: string; url: string }[];
+
+const contentBlocks = translation.contentBlocks as Block[];
+const pageTitle = translation.seoTitle || translation.title;
+const pageDescription = translation.seoDescription || '';
+const canonicalUrl = new URL(`/${locale}/${slug}`, Astro.site || 'https://localhost').href;
+
+// Find all available locales for hreflang
+const allTranslations = await db
+  .select({ locale: translations.locale, slug: translations.slug })
+  .from(translations)
+  .where(eq(translations.pageId, translation.pageId));
+
+const hrefLangs = allTranslations.map((t) => ({
+  locale: t.locale,
+  url: new URL(`/${t.locale}/${t.slug}`, Astro.site || 'https://localhost').href,
+}));
+
+// Add default (original page)
+hrefLangs.push({
+  locale: 'x-default',
+  url: new URL(`/${page.slug}`, Astro.site || 'https://localhost').href,
+});
+
+const headingFont = tokens.typography.headingFont;
+const bodyFont = tokens.typography.bodyFont;
+const fontsSet = new Set([headingFont, bodyFont].filter(Boolean));
+const googleFontsUrl = fontsSet.size > 0
+  ? `https://fonts.googleapis.com/css2?${[...fontsSet].map(f => `family=${encodeURIComponent(f)}:wght@400;500;600;700`).join('&')}&display=swap`
+  : '';
+---
+
+<html lang={locale}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <SEOHead
+      title={pageTitle}
+      description={pageDescription}
+      canonicalUrl={canonicalUrl}
+      siteName={siteName}
+      locale={locale === 'th' ? 'th_TH' : locale === 'ja' ? 'ja_JP' : `${locale}_${locale.toUpperCase()}`}
+    />
+    {hrefLangs.map((hl) => (
+      <link rel="alternate" hreflang={hl.locale} href={hl.url} />
+    ))}
+    {googleFontsUrl && (
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link href={googleFontsUrl} rel="stylesheet" />
+    )}
+    <style set:html={tokenCSS}></style>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: var(--font-body);
+        font-size: var(--font-size-base);
+        line-height: var(--line-height);
+        color: var(--color-foreground);
+        background-color: var(--color-background);
+      }
+      img { max-width: 100%; height: auto; }
+      a { color: var(--color-primary); }
+    </style>
+    {page.customCss && <style set:html={page.customCss}></style>}
+  </head>
+  <body>
+    <Header siteName={siteName} logo={siteLogo} navLinks={navLinks} />
+    <main>
+      <BlockRenderer blocks={contentBlocks} />
+    </main>
+    <Footer siteName={siteName} tagline={siteTagline} socialLinks={socialLinks} />
+  </body>
+</html>

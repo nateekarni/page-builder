@@ -1,0 +1,430 @@
+---
+/**
+ * BlockRenderer — Recursive block-to-HTML renderer for public pages.
+ *
+ * Input: Block[] → Output: Semantic HTML + scoped CSS
+ * Pure rendering component: no data fetching, no side effects.
+ *
+ * Features:
+ * - Semantic tag mapping (container→section, text→h1-h6/p, image→figure)
+ * - Responsive CSS via @media queries from ResponsiveValue
+ * - Visibility handling via display:none per breakpoint
+ * - Custom CSS injection scoped to block
+ */
+
+import type { Block, StyleConfig, Viewport } from '../../lib/blocks';
+
+interface Props {
+  blocks: Block[];
+}
+
+const { blocks } = Astro.props;
+
+/**
+ * Resolve responsive value for a given viewport, falling back to desktop.
+ */
+function resolveResponsive<T>(value: { desktop: T; tablet?: T; mobile?: T } | undefined, viewport: Viewport): T | undefined {
+  if (!value) return undefined;
+  if (viewport === 'mobile') return value.mobile ?? value.tablet ?? value.desktop;
+  if (viewport === 'tablet') return value.tablet ?? value.desktop;
+  return value.desktop;
+}
+
+/**
+ * Generate CSS for spacing (margin/padding) across breakpoints.
+ */
+function generateSpacingCSS(blockId: string, styles: StyleConfig): string {
+  const lines: string[] = [];
+
+  const desktopMargin = resolveResponsive(styles.margin, 'desktop');
+  const desktopPadding = resolveResponsive(styles.padding, 'desktop');
+
+  lines.push(`.block-${blockId} {`);
+  if (desktopMargin) {
+    lines.push(`  margin: ${desktopMargin.top} ${desktopMargin.right} ${desktopMargin.bottom} ${desktopMargin.left};`);
+  }
+  if (desktopPadding) {
+    lines.push(`  padding: ${desktopPadding.top} ${desktopPadding.right} ${desktopPadding.bottom} ${desktopPadding.left};`);
+  }
+  lines.push('}');
+
+  // Tablet
+  const tabletMargin = styles.margin?.tablet;
+  const tabletPadding = styles.padding?.tablet;
+  if (tabletMargin || tabletPadding) {
+    lines.push(`@media (max-width: 1023px) {`);
+    lines.push(`  .block-${blockId} {`);
+    if (tabletMargin) {
+      lines.push(`    margin: ${tabletMargin.top} ${tabletMargin.right} ${tabletMargin.bottom} ${tabletMargin.left};`);
+    }
+    if (tabletPadding) {
+      lines.push(`    padding: ${tabletPadding.top} ${tabletPadding.right} ${tabletPadding.bottom} ${tabletPadding.left};`);
+    }
+    lines.push('  }');
+    lines.push('}');
+  }
+
+  // Mobile
+  const mobileMargin = styles.margin?.mobile;
+  const mobilePadding = styles.padding?.mobile;
+  if (mobileMargin || mobilePadding) {
+    lines.push(`@media (max-width: 767px) {`);
+    lines.push(`  .block-${blockId} {`);
+    if (mobileMargin) {
+      lines.push(`    margin: ${mobileMargin.top} ${mobileMargin.right} ${mobileMargin.bottom} ${mobileMargin.left};`);
+    }
+    if (mobilePadding) {
+      lines.push(`    padding: ${mobilePadding.top} ${mobilePadding.right} ${mobilePadding.bottom} ${mobilePadding.left};`);
+    }
+    lines.push('  }');
+    lines.push('}');
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Generate all responsive style CSS for a single block.
+ */
+function generateBlockCSS(block: Block): string {
+  const { id, styles, visibility, customCSS } = block;
+  const lines: string[] = [];
+
+  // Base desktop styles
+  const cssProps: string[] = [];
+  const desktopWidth = resolveResponsive(styles.width, 'desktop');
+  const desktopMaxWidth = resolveResponsive(styles.maxWidth, 'desktop');
+  const desktopDisplay = resolveResponsive(styles.display, 'desktop');
+  const desktopFlexDir = resolveResponsive(styles.flexDirection, 'desktop');
+  const desktopJustify = resolveResponsive(styles.justifyContent, 'desktop');
+  const desktopAlign = resolveResponsive(styles.alignItems, 'desktop');
+  const desktopGap = resolveResponsive(styles.gap, 'desktop');
+  const desktopTextAlign = resolveResponsive(styles.textAlign, 'desktop');
+  const desktopFontSize = resolveResponsive(styles.fontSize, 'desktop');
+
+  if (desktopWidth && desktopWidth !== '100%') cssProps.push(`width: ${desktopWidth}`);
+  if (desktopMaxWidth && desktopMaxWidth !== 'none') cssProps.push(`max-width: ${desktopMaxWidth}`);
+  if (desktopDisplay && desktopDisplay !== 'block') cssProps.push(`display: ${desktopDisplay}`);
+  if (desktopFlexDir && desktopFlexDir !== 'row') cssProps.push(`flex-direction: ${desktopFlexDir}`);
+  if (desktopJustify && desktopJustify !== 'start') {
+    const justifyMap: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between', around: 'space-around', evenly: 'space-evenly' };
+    cssProps.push(`justify-content: ${justifyMap[desktopJustify] ?? desktopJustify}`);
+  }
+  if (desktopAlign && desktopAlign !== 'stretch') {
+    const alignMap: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', stretch: 'stretch', baseline: 'baseline' };
+    cssProps.push(`align-items: ${alignMap[desktopAlign] ?? desktopAlign}`);
+  }
+  if (desktopGap && desktopGap !== '0') cssProps.push(`gap: ${desktopGap}`);
+  if (desktopTextAlign && desktopTextAlign !== 'left') cssProps.push(`text-align: ${desktopTextAlign}`);
+  if (desktopFontSize) cssProps.push(`font-size: ${desktopFontSize}`);
+  if (styles.bgColor && styles.bgColor !== 'transparent') cssProps.push(`background-color: ${styles.bgColor}`);
+  if (styles.textColor && styles.textColor !== 'inherit') cssProps.push(`color: ${styles.textColor}`);
+  if (styles.borderRadius && styles.borderRadius !== '0') cssProps.push(`border-radius: ${styles.borderRadius}`);
+
+  if (cssProps.length > 0) {
+    lines.push(`.block-${id} { ${cssProps.join('; ')}; }`);
+  }
+
+  // Spacing (margin/padding) with responsive
+  lines.push(generateSpacingCSS(id, styles));
+
+  // Responsive overrides for tablet
+  const tabletOverrides: string[] = [];
+  const tabletWidth = styles.width?.tablet;
+  const tabletDisplay = styles.display?.tablet;
+  const tabletFlexDir = styles.flexDirection?.tablet;
+  const tabletGap = styles.gap?.tablet;
+  const tabletTextAlign = styles.textAlign?.tablet;
+  const tabletFontSize = styles.fontSize?.tablet;
+
+  if (tabletWidth) tabletOverrides.push(`width: ${tabletWidth}`);
+  if (tabletDisplay) tabletOverrides.push(`display: ${tabletDisplay}`);
+  if (tabletFlexDir) tabletOverrides.push(`flex-direction: ${tabletFlexDir}`);
+  if (tabletGap) tabletOverrides.push(`gap: ${tabletGap}`);
+  if (tabletTextAlign) tabletOverrides.push(`text-align: ${tabletTextAlign}`);
+  if (tabletFontSize) tabletOverrides.push(`font-size: ${tabletFontSize}`);
+
+  if (tabletOverrides.length > 0) {
+    lines.push(`@media (max-width: 1023px) { .block-${id} { ${tabletOverrides.join('; ')}; } }`);
+  }
+
+  // Responsive overrides for mobile
+  const mobileOverrides: string[] = [];
+  const mobileWidth = styles.width?.mobile;
+  const mobileDisplay = styles.display?.mobile;
+  const mobileFlexDir = styles.flexDirection?.mobile;
+  const mobileGap = styles.gap?.mobile;
+  const mobileTextAlign = styles.textAlign?.mobile;
+  const mobileFontSize = styles.fontSize?.mobile;
+
+  if (mobileWidth) mobileOverrides.push(`width: ${mobileWidth}`);
+  if (mobileDisplay) mobileOverrides.push(`display: ${mobileDisplay}`);
+  if (mobileFlexDir) mobileOverrides.push(`flex-direction: ${mobileFlexDir}`);
+  if (mobileGap) mobileOverrides.push(`gap: ${mobileGap}`);
+  if (mobileTextAlign) mobileOverrides.push(`text-align: ${mobileTextAlign}`);
+  if (mobileFontSize) mobileOverrides.push(`font-size: ${mobileFontSize}`);
+
+  if (mobileOverrides.length > 0) {
+    lines.push(`@media (max-width: 767px) { .block-${id} { ${mobileOverrides.join('; ')}; } }`);
+  }
+
+  // Visibility per viewport
+  if (visibility.tablet === false) {
+    lines.push(`@media (min-width: 768px) and (max-width: 1023px) { .block-${id} { display: none !important; } }`);
+  }
+  if (visibility.mobile === false) {
+    lines.push(`@media (max-width: 767px) { .block-${id} { display: none !important; } }`);
+  }
+  if (visibility.desktop === false) {
+    lines.push(`@media (min-width: 1024px) { .block-${id} { display: none !important; } }`);
+  }
+
+  // Custom CSS scoped to block
+  if (customCSS?.trim()) {
+    lines.push(`.block-${id} { ${customCSS} }`);
+  }
+
+  // Recurse children
+  if (block.children?.length) {
+    for (const child of block.children) {
+      lines.push(generateBlockCSS(child));
+    }
+  }
+
+  return lines.filter(Boolean).join('\n');
+}
+
+/**
+ * Render a single block to HTML string recursively.
+ */
+function renderBlockToHTML(block: Block): string {
+  const props = block.props as Record<string, any>;
+  const className = `block-${block.id}`;
+
+  switch (block.type) {
+    case 'container': {
+      const tag = props.tag || 'section';
+      const childrenHTML = block.children?.map(renderBlockToHTML).join('') ?? '';
+      return `<${tag} class="${className}">${childrenHTML}</${tag}>`;
+    }
+
+    case 'columns': {
+      const count = props.count || 2;
+      const widths = props.widths as string[] | undefined;
+      const childrenHTML = (block.children || []).map((child: Block, i: number) => {
+        const colWidth = widths?.[i] || `${100 / count}%`;
+        return `<div class="block-col" style="flex: 0 0 ${colWidth}; min-width: 0;">${renderBlockToHTML(child)}</div>`;
+      }).join('');
+      const stackClass = props.stackOnMobile !== false ? ' columns-stack' : '';
+      return `<div class="${className} columns${stackClass}" style="display: flex; gap: inherit;">${childrenHTML}</div>`;
+    }
+
+    case 'text': {
+      const tag = props.level || 'p';
+      const content = props.content || '';
+      if (['h1','h2','h3','h4','h5','h6'].includes(tag)) {
+        return `<${tag} class="${className}" style="font-family: var(--font-heading); font-size: var(--font-size-${tag});">${content}</${tag}>`;
+      }
+      return `<${tag} class="${className}">${content}</${tag}>`;
+    }
+
+    case 'image': {
+      const src = props.src || '';
+      const alt = props.alt || '';
+      const caption = props.caption || '';
+      const linkUrl = props.linkUrl || '';
+      const objectFit = props.objectFit || 'cover';
+      if (!src) return `<figure class="${className}"></figure>`;
+      const img = `<img src="${escapeAttr(src)}" alt="${escapeAttr(alt)}" style="width: 100%; height: auto; object-fit: ${objectFit};" loading="lazy" />`;
+      const imgEl = linkUrl ? `<a href="${escapeAttr(linkUrl)}">${img}</a>` : img;
+      const captionEl = caption ? `<figcaption>${escapeHTML(caption)}</figcaption>` : '';
+      return `<figure class="${className}">${imgEl}${captionEl}</figure>`;
+    }
+
+    case 'video': {
+      const url = props.url || '';
+      const aspect = props.aspectRatio || '16:9';
+      const [w, h] = aspect.split(':').map(Number);
+      const paddingTop = ((h / w) * 100).toFixed(2);
+      if (!url) return `<div class="${className}"></div>`;
+      const embedUrl = convertToEmbed(url);
+      return `<div class="${className}" style="position: relative; padding-top: ${paddingTop}%; overflow: hidden;"><iframe src="${escapeAttr(embedUrl)}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" allowfullscreen loading="lazy"></iframe></div>`;
+    }
+
+    case 'hero': {
+      const heading = props.heading || '';
+      const subheading = props.subheading || '';
+      const bgUrl = props.backgroundUrl || '';
+      const overlay = props.overlayColor || 'rgba(0,0,0,0.4)';
+      const ctaText = props.ctaText || '';
+      const ctaUrl = props.ctaUrl || '#';
+      const minHeight = props.minHeight || '60vh';
+      const bgStyle = bgUrl ? `background-image: url('${escapeAttr(bgUrl)}'); background-size: cover; background-position: center;` : '';
+      const overlayEl = `<div style="position: absolute; inset: 0; background: ${overlay};"></div>`;
+      const contentParts: string[] = [];
+      if (heading) contentParts.push(`<h1 style="font-family: var(--font-heading); font-size: var(--font-size-h1); margin-bottom: 0.5rem;">${escapeHTML(heading)}</h1>`);
+      if (subheading) contentParts.push(`<p style="font-size: 1.25rem; opacity: 0.9;">${escapeHTML(subheading)}</p>`);
+      if (ctaText) contentParts.push(`<a href="${escapeAttr(ctaUrl)}" style="display: inline-block; margin-top: 1.5rem; padding: 0.75rem 2rem; background: var(--color-primary); color: #fff; border-radius: var(--radius); text-decoration: none; font-weight: 600;">${escapeHTML(ctaText)}</a>`);
+      return `<section class="${className}" style="position: relative; min-height: ${minHeight}; display: flex; align-items: center; justify-content: center; color: #fff; text-align: center; ${bgStyle}">${overlayEl}<div style="position: relative; z-index: 1; max-width: 800px; padding: 2rem;">${contentParts.join('')}</div></section>`;
+    }
+
+    case 'cta': {
+      const text = props.text || 'Click here';
+      const url = props.url || '#';
+      const variant = props.variant || 'primary';
+      const size = props.size || 'md';
+      const openInNewTab = props.openInNewTab || false;
+      const sizeMap: Record<string, string> = { sm: 'padding: 0.5rem 1rem; font-size: 0.875rem;', md: 'padding: 0.75rem 1.5rem; font-size: 1rem;', lg: 'padding: 1rem 2rem; font-size: 1.125rem;' };
+      const variantMap: Record<string, string> = {
+        primary: `background: var(--color-primary); color: #fff;`,
+        secondary: `background: var(--color-secondary); color: #fff;`,
+        outline: `background: transparent; color: var(--color-primary); border: 2px solid var(--color-primary);`,
+        ghost: `background: transparent; color: var(--color-primary);`,
+      };
+      const target = openInNewTab ? ' target="_blank" rel="noopener noreferrer"' : '';
+      return `<a class="${className}" href="${escapeAttr(url)}"${target} style="display: inline-block; border-radius: var(--radius); font-weight: 600; text-decoration: none; text-align: center; ${sizeMap[size] || sizeMap.md} ${variantMap[variant] || variantMap.primary}">${escapeHTML(text)}</a>`;
+    }
+
+    case 'spacer': {
+      const height = resolveResponsive(props.height, 'desktop') || '2rem';
+      return `<div class="${className}" style="height: ${height};" aria-hidden="true"></div>`;
+    }
+
+    case 'divider': {
+      const style = props.style || 'solid';
+      const color = props.color || '#e5e7eb';
+      const thickness = props.thickness || '1px';
+      const width = props.width || '100%';
+      return `<hr class="${className}" style="border: none; border-top: ${thickness} ${style} ${color}; width: ${width}; margin: 0 auto;" />`;
+    }
+
+    case 'accordion': {
+      const items = (props.items || []) as { id: string; title: string; content: string; isOpen?: boolean }[];
+      const itemsHTML = items.map((item) => {
+        return `<details class="accordion-item"${item.isOpen ? ' open' : ''}><summary style="cursor: pointer; padding: 1rem; font-weight: 600; border-bottom: 1px solid var(--color-border);">${escapeHTML(item.title)}</summary><div style="padding: 1rem;">${item.content}</div></details>`;
+      }).join('');
+      return `<div class="${className}">${itemsHTML}</div>`;
+    }
+
+    case 'tabs': {
+      const tabs = (props.tabs || []) as { id: string; label: string }[];
+      const children = block.children || [];
+      const activeTab = props.activeTabId || tabs[0]?.id;
+      const tabBtns = tabs.map((tab) => {
+        const isActive = tab.id === activeTab;
+        return `<button class="tab-btn${isActive ? ' active' : ''}" style="padding: 0.75rem 1.5rem; border: none; background: ${isActive ? 'var(--color-primary)' : 'transparent'}; color: ${isActive ? '#fff' : 'inherit'}; cursor: pointer; font-weight: 500; border-radius: var(--radius) var(--radius) 0 0;">${escapeHTML(tab.label)}</button>`;
+      }).join('');
+      const panels = tabs.map((tab, i) => {
+        const child = children[i];
+        const isActive = tab.id === activeTab;
+        const content = child ? renderBlockToHTML(child) : '';
+        return `<div class="tab-panel" style="display: ${isActive ? 'block' : 'none'}; padding: 1rem; border: 1px solid var(--color-border); border-top: none;">${content}</div>`;
+      }).join('');
+      return `<div class="${className}"><div class="tab-nav" style="display: flex; border-bottom: 1px solid var(--color-border);">${tabBtns}</div>${panels}</div>`;
+    }
+
+    case 'icon-box': {
+      const title = props.title || '';
+      const description = props.description || '';
+      const iconSize = props.iconSize || '2rem';
+      const iconColor = props.iconColor || 'var(--color-primary)';
+      return `<div class="${className}" style="text-align: center;"><div style="font-size: ${iconSize}; color: ${iconColor}; margin-bottom: 0.75rem;">&#9733;</div>${title ? `<h3 style="font-family: var(--font-heading); margin-bottom: 0.5rem;">${escapeHTML(title)}</h3>` : ''}${description ? `<p style="color: var(--color-muted-foreground);">${escapeHTML(description)}</p>` : ''}</div>`;
+    }
+
+    case 'testimonial': {
+      const quote = props.quote || '';
+      const authorName = props.authorName || '';
+      const authorTitle = props.authorTitle || '';
+      const authorAvatar = props.authorAvatar || '';
+      const avatarEl = authorAvatar ? `<img src="${escapeAttr(authorAvatar)}" alt="${escapeAttr(authorName)}" style="width: 48px; height: 48px; border-radius: 50%; object-fit: cover;" loading="lazy" />` : '';
+      return `<blockquote class="${className}" style="padding: 1.5rem; border-left: 4px solid var(--color-primary); background: var(--color-muted); border-radius: 0 var(--radius) var(--radius) 0;"><p style="font-style: italic; margin-bottom: 1rem;">"${escapeHTML(quote)}"</p><footer style="display: flex; align-items: center; gap: 0.75rem;">${avatarEl}<div><strong>${escapeHTML(authorName)}</strong>${authorTitle ? `<br/><span style="font-size: 0.875rem; color: var(--color-muted-foreground);">${escapeHTML(authorTitle)}</span>` : ''}</div></footer></blockquote>`;
+    }
+
+    case 'form': {
+      const fields = (props.fields || []) as { id: string; type: string; label: string; placeholder?: string; required?: boolean; options?: string[] }[];
+      const submitLabel = props.submitLabel || 'Submit';
+      const fieldsHTML = fields.map((field) => {
+        const req = field.required ? ' required' : '';
+        const ph = field.placeholder ? ` placeholder="${escapeAttr(field.placeholder)}"` : '';
+        let input = '';
+        if (field.type === 'textarea') {
+          input = `<textarea name="${escapeAttr(field.id)}"${ph}${req} style="width: 100%; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius); min-height: 100px;"></textarea>`;
+        } else if (field.type === 'select') {
+          const opts = (field.options || []).map(o => `<option value="${escapeAttr(o)}">${escapeHTML(o)}</option>`).join('');
+          input = `<select name="${escapeAttr(field.id)}"${req} style="width: 100%; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius);"><option value="">-- Select --</option>${opts}</select>`;
+        } else if (field.type === 'checkbox') {
+          input = `<label style="display: flex; align-items: center; gap: 0.5rem;"><input type="checkbox" name="${escapeAttr(field.id)}"${req} /> ${escapeHTML(field.label)}</label>`;
+        } else {
+          input = `<input type="${field.type}" name="${escapeAttr(field.id)}"${ph}${req} style="width: 100%; padding: 0.5rem; border: 1px solid var(--color-border); border-radius: var(--radius);" />`;
+        }
+        const labelEl = field.type !== 'checkbox' ? `<label style="display: block; margin-bottom: 0.25rem; font-weight: 500;">${escapeHTML(field.label)}${field.required ? ' <span style="color: red;">*</span>' : ''}</label>` : '';
+        return `<div style="margin-bottom: 1rem;">${labelEl}${input}</div>`;
+      }).join('');
+      return `<form class="${className}" data-block-form style="max-width: 600px;"><input type="hidden" name="_blockId" value="${escapeAttr(block.id)}" />${fieldsHTML}<button type="submit" style="padding: 0.75rem 1.5rem; background: var(--color-primary); color: #fff; border: none; border-radius: var(--radius); font-weight: 600; cursor: pointer;">${escapeHTML(submitLabel)}</button></form>`;
+    }
+
+    case 'map': {
+      const address = props.address || '';
+      const height = props.height || '400px';
+      if (!address) return `<div class="${className}"></div>`;
+      const encodedAddr = encodeURIComponent(address);
+      return `<div class="${className}" style="width: 100%; height: ${height}; overflow: hidden; border-radius: var(--radius);"><iframe src="https://maps.google.com/maps?q=${encodedAddr}&output=embed" style="width: 100%; height: 100%; border: 0;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>`;
+    }
+
+    case 'code': {
+      const code = props.code || '';
+      const language = props.language || 'javascript';
+      const filename = props.filename || '';
+      const headerEl = filename ? `<div style="padding: 0.5rem 1rem; background: #1e293b; color: #94a3b8; font-size: 0.75rem; border-radius: var(--radius) var(--radius) 0 0;">${escapeHTML(filename)}</div>` : '';
+      return `<div class="${className}">${headerEl}<pre style="background: #0f172a; color: #e2e8f0; padding: 1rem; overflow-x: auto; border-radius: ${filename ? '0 0' : ''} var(--radius) var(--radius); font-size: 0.875rem; line-height: 1.6;"><code class="language-${escapeAttr(language)}">${escapeHTML(code)}</code></pre></div>`;
+    }
+
+    case 'query-loop': {
+      return `<div class="${className}"><!-- query-loop rendered server-side --></div>`;
+    }
+
+    default:
+      return `<div class="${className}"><!-- unknown block type: ${block.type} --></div>`;
+  }
+}
+
+function escapeHTML(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeAttr(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function convertToEmbed(url: string): string {
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  // Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  return url;
+}
+
+// Collect all CSS from all blocks
+function collectAllCSS(blockList: Block[]): string {
+  return blockList.map(generateBlockCSS).join('\n');
+}
+
+const allCSS = collectAllCSS(blocks);
+const allHTML = blocks.map(renderBlockToHTML).join('');
+---
+
+<style set:html={allCSS}></style>
+<style>
+  /* Columns responsive stacking */
+  @media (max-width: 767px) {
+    .columns-stack {
+      flex-direction: column !important;
+    }
+    .columns-stack .block-col {
+      flex: 1 1 100% !important;
+    }
+  }
+</style>
+<Fragment set:html={allHTML} />

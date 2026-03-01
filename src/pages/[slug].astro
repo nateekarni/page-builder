@@ -1,0 +1,168 @@
+---
+/**
+ * Dynamic Page Route — renders published pages by slug.
+ *
+ * Flow: fetch page by slug → 404 if not found/not published →
+ *       inject design tokens → render SEOHead + Header + BlockRenderer + Footer
+ *
+ * Clean Code: thin orchestrator — fetch → check → render.
+ */
+
+import { eq, and } from 'drizzle-orm';
+import { pages, siteSettings } from '../db/schema';
+import { designTokensSchema, generateTokenCSS, getDefaultTokens } from '../lib/global-styles';
+import type { Block } from '../lib/blocks';
+import BlockRenderer from '../components/astro/BlockRenderer.astro';
+import SEOHead from '../components/astro/SEOHead.astro';
+import Header from '../components/astro/Header.astro';
+import Footer from '../components/astro/Footer.astro';
+import { selectVariant } from '../lib/ab-testing';
+
+const { slug } = Astro.params;
+const db = Astro.locals.db;
+
+if (!slug) {
+  return Astro.redirect('/');
+}
+
+// Fetch page by slug
+const pageResult = await db
+  .select()
+  .from(pages)
+  .where(and(eq(pages.slug, slug), eq(pages.status, 'published')))
+  .limit(1);
+
+const page = pageResult[0];
+
+if (!page) {
+  return new Response(null, { status: 404, statusText: 'Not Found' });
+}
+
+// Load site settings (design tokens, site identity, social links)
+const settingsRows = await db.select().from(siteSettings);
+const settingsMap = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
+
+// Design tokens
+const tokensRaw = settingsMap['design_tokens'];
+const tokens = tokensRaw ? designTokensSchema.parse(tokensRaw) : getDefaultTokens();
+const tokenCSS = generateTokenCSS(tokens);
+
+// Site identity
+const siteIdentity = (settingsMap['site_identity'] ?? {}) as Record<string, unknown>;
+const siteName = (siteIdentity.name as string) ?? 'Aglow';
+const siteLogo = (siteIdentity.logo as string) ?? '';
+const siteTagline = (siteIdentity.tagline as string) ?? '';
+
+// Social links
+const socialLinks = (settingsMap['social_links'] ?? { links: [] }) as Record<string, unknown>;
+
+// Navigation links (from site_settings or fallback)
+const navSettings = (settingsMap['navigation'] ?? { links: [] }) as Record<string, unknown>;
+const navLinks = (navSettings.links ?? []) as { label: string; url: string }[];
+
+// A/B test variant selection
+const contentBlocks = await selectVariant({
+  db,
+  pageId: page.id,
+  defaultBlocks: page.contentBlocks as Block[],
+  cookies: Astro.cookies,
+});
+
+// SEO
+const pageTitle = page.seoTitle || page.title;
+const pageDescription = page.seoDescription || '';
+const ogImage = page.ogImageUrl || '';
+const canonicalUrl = new URL(`/${slug}`, Astro.site || 'https://localhost').href;
+
+// Google Fonts
+const headingFont = tokens.typography.headingFont;
+const bodyFont = tokens.typography.bodyFont;
+const fontsSet = new Set([headingFont, bodyFont].filter(Boolean));
+const googleFontsUrl = fontsSet.size > 0
+  ? `https://fonts.googleapis.com/css2?${[...fontsSet].map(f => `family=${encodeURIComponent(f)}:wght@400;500;600;700`).join('&')}&display=swap`
+  : '';
+---
+
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <SEOHead
+      title={pageTitle}
+      description={pageDescription}
+      ogImage={ogImage}
+      canonicalUrl={canonicalUrl}
+      siteName={siteName}
+    />
+    {googleFontsUrl && (
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+      <link href={googleFontsUrl} rel="stylesheet" />
+    )}
+    <style set:html={tokenCSS}></style>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: var(--font-body);
+        font-size: var(--font-size-base);
+        line-height: var(--line-height);
+        color: var(--color-foreground);
+        background-color: var(--color-background);
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      img { max-width: 100%; height: auto; }
+      a { color: var(--color-primary); }
+    </style>
+    {page.customCss && <style set:html={page.customCss}></style>}
+  </head>
+  <body>
+    <Header
+      siteName={siteName}
+      logo={siteLogo}
+      navLinks={navLinks}
+    />
+
+    <main>
+      <BlockRenderer blocks={contentBlocks as Block[]} />
+    </main>
+
+    <Footer
+      siteName={siteName}
+      tagline={siteTagline}
+      socialLinks={socialLinks}
+    />
+
+    <script>
+      // Form submission handler (zero-framework)
+      document.querySelectorAll('form[data-block-form]').forEach((form) => {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const formEl = e.target as HTMLFormElement;
+          const formData = new FormData(formEl);
+          const data: Record<string, string> = {};
+          formData.forEach((val, key) => { data[key] = val.toString(); });
+
+          const blockId = data._blockId;
+          delete data._blockId;
+
+          try {
+            const pageSlug = window.location.pathname.replace(/^\//, '');
+            const resp = await fetch('/api/forms/submit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ formBlockId: blockId, pageSlug, data }),
+            });
+            if (resp.ok) {
+              const btn = formEl.querySelector('button[type="submit"]');
+              if (btn) btn.textContent = 'Thank you!';
+              formEl.reset();
+            }
+          } catch {
+            // Silent fail for public forms
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
