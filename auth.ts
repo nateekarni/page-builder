@@ -30,6 +30,7 @@ export function createAuth(d1: D1Database) {
     database: drizzleAdapter(db, { provider: "sqlite" }),
     basePath: "/api/auth",
     baseURL: "https://page-builder-1tl.pages.dev",
+    trustedOrigins: ["https://page-builder-1tl.pages.dev"],
 
     emailAndPassword: {
       enabled: true,
