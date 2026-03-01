@@ -13,5 +13,4 @@ const handleAuthRequest: APIRoute = async ({ request, locals }) => {
   return auth.handler(request);
 };
 
-export const GET = handleAuthRequest;
-export const POST = handleAuthRequest;
+export const ALL = handleAuthRequest;
